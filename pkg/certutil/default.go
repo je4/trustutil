@@ -31,7 +31,7 @@ var DefaultIPAddresses = []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback}
 
 var DefaultDuration = time.Hour * 24 * 365 * 10
 
-func CreateDefaultCertificate(client, server bool) ([]byte, []byte, error) {
+func CreateDefaultCertificate(client, server bool, uris []string) (certPEM []byte, certPrivKeyPEM []byte, err error) {
 	defaultCA, defaultCAPrivKey, err := CertificateKeyFromPEM(DefaultCACrt, DefaultCAKey, nil)
 	if err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -44,7 +44,7 @@ func CreateDefaultCertificate(client, server bool) ([]byte, []byte, error) {
 		DefaultIPAddresses,
 		DefaultDNSNames,
 		nil,
-		nil,
+		uris,
 		DefaultName,
 		DefaultKeyType,
 	)

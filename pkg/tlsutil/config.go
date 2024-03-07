@@ -101,12 +101,14 @@ func CreateServerTLSConfigDefault(mutual bool, uris []string) (*tls.Config, erro
 	return tlsConfig, nil
 }
 
-func CreateClientMTLSConfig(clientCert tls.Certificate) (*tls.Config, error) {
-	certPool, err := x509.SystemCertPool()
+func CreateClientMTLSConfig(clientCert tls.Certificate, caPEM []byte) (*tls.Config, error) {
+	/*certPool, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot get system cert pool")
 	}
-	certPool.AppendCertsFromPEM(certutil.DefaultCACrt)
+	*/
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM(caPEM)
 
 	clientTLSConf := &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
@@ -142,5 +144,5 @@ func CreateClientMTLSConfigDefault() (*tls.Config, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create client certificate")
 	}
-	return CreateClientMTLSConfig(clientCert)
+	return CreateClientMTLSConfig(clientCert, certutil.DefaultCACrt)
 }

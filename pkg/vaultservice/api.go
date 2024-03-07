@@ -15,11 +15,10 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golang.org/x/net/http2"
+	"io/fs"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -39,7 +38,7 @@ const V1BASEPATH = "/api/v1"
 //	@license.name	Apache 2.0
 //	@license.url	http://www.apache.org/licenses/LICENSE-2.0.html
 
-func NewController(addr string, addrExt string, subpath string, cert tls.Certificate, ca *x509.Certificate, caPrivKey any, clientCerts string, logger zLogger.ZLogger, client []*config.MiniVaultClientConfig) (*controller, error) {
+func NewController(addr string, addrExt string, subpath string, cert tls.Certificate, ca *x509.Certificate, caPrivKey any, clientCerts fs.FS, logger zLogger.ZLogger, client []*config.MiniVaultClientConfig) (*controller, error) {
 	u, err := url.Parse(addrExt)
 	if err != nil {
 		return nil, errors.Wrapf(err, "invalid external address '%s'", addrExt)
@@ -71,7 +70,7 @@ type controller struct {
 	subpath     string
 	logger      zLogger.ZLogger
 	client      []*config.MiniVaultClientConfig
-	clientCerts string
+	clientCerts fs.FS
 	ca          *x509.Certificate
 	caPrivKey   any
 	certChan    chan *tls.Certificate
@@ -89,6 +88,10 @@ func (ctrl *controller) Init(cert tls.Certificate) error {
 	if err != nil {
 		return errors.Wrap(err, "cannot create tls config")
 	}
+	tlsConfig.RootCAs = x509.NewCertPool()
+	tlsConfig.RootCAs.AddCert(ctrl.ca)
+	tlsConfig.ClientCAs = x509.NewCertPool()
+	tlsConfig.ClientCAs.AddCert(ctrl.ca)
 	ctrl.certChan, err = tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig)
 	if err != nil {
 		return errors.Wrap(err, "cannot upgrade tls config")
@@ -164,10 +167,11 @@ func (ctrl *controller) clientCert(c *gin.Context) {
 		NewResultMessage(c, http.StatusNotFound, errors.Errorf("client %s is not configured", clientName))
 		return
 	}
-	pwFile := filepath.Join(ctrl.clientCerts, clientName+".pw")
-	pw, err := os.ReadFile(pwFile)
+	pwFile := clientName + ".pw"
+	pw, err := fs.ReadFile(ctrl.clientCerts, pwFile)
 	if err != nil {
-		NewResultMessage(c, http.StatusInternalServerError, errors.Wrap(err, "cannot read password file"))
+		NewResultMessage(c, http.StatusNotFound, errors.Wrap(err, "cannot read password file"))
+		return
 	}
 	pw = []byte(strings.TrimSpace(string(pw)))
 
