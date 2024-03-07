@@ -118,7 +118,7 @@ func CreateClientMTLSConfig(clientCert tls.Certificate, caPEM []byte) (*tls.Conf
 	return clientTLSConf, nil
 }
 
-func CreateClientMTLSConfigDefault() (*tls.Config, error) {
+func CreateClientMTLSConfigDefault(uris []string) (*tls.Config, error) {
 	name := certutil.DefaultName
 	name.CommonName = "dummyClient"
 	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
@@ -133,7 +133,7 @@ func CreateClientMTLSConfigDefault() (*tls.Config, error) {
 		certutil.DefaultIPAddresses,
 		certutil.DefaultDNSNames,
 		nil,
-		[]string{"grpc:dummy"},
+		uris,
 		name,
 		certutil.DefaultKeyType,
 	)
