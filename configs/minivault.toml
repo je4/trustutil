@@ -1,0 +1,29 @@
+tlscert = "configs/minivault.crt"
+tlskey = "configs/minivault.key"
+tlskeypass = "%%MINIVAULT_KEY_PASS%%"
+clientcerts = "certificates"
+
+[vault]
+ca = "configs/ca.crt"
+cakey = "configs/ca.key"
+cakeypass = "%%CA_KEY_PASS%%"
+
+[[client]]
+name = "test1"
+uris = ["grpc:dummy"]
+validity = "24h"
+
+[[client]]
+name = "test2"
+uris = ["grpc:dummy"]
+validity = "24h"
+
+[[client]]
+name = "test3"
+uris = ["grpc:dummy"]
+validity = "24h"
+
+[[client]]
+name = "browser"
+uris = ["grpc:dummy"]
+validity = "100h"

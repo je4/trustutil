@@ -1,0 +1,74 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "minimalistic vault for generating client and server certificates",
+        "title": "miniVault API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Jürgen Enge",
+            "url": "https://ub.unibas.ch",
+            "email": "juergen.enge@unibas.ch"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "paths": {
+        "/clientcert": {
+            "get": {
+                "description": "retrieves a new minivault client access certificate",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Vault"
+                ],
+                "summary": "gets GPT query context to query",
+                "operationId": "get-client-cert",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/vaultservice.HTTPResultMessage"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/vaultservice.HTTPResultMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/vaultservice.HTTPResultMessage"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "vaultservice.HTTPResultMessage": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "message": {
+                    "type": "string",
+                    "example": "status bad request"
+                }
+            }
+        }
+    }
+}

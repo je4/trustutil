@@ -1,0 +1,50 @@
+definitions:
+  vaultservice.HTTPResultMessage:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: status bad request
+        type: string
+    type: object
+info:
+  contact:
+    email: juergen.enge@unibas.ch
+    name: Jürgen Enge
+    url: https://ub.unibas.ch
+  description: minimalistic vault for generating client and server certificates
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: miniVault API
+  version: "1.0"
+paths:
+  /clientcert:
+    get:
+      description: retrieves a new minivault client access certificate
+      operationId: get-client-cert
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/vaultservice.HTTPResultMessage'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/vaultservice.HTTPResultMessage'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/vaultservice.HTTPResultMessage'
+      summary: gets GPT query context to query
+      tags:
+      - Vault
+swagger: "2.0"
