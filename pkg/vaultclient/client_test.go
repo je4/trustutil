@@ -2,12 +2,17 @@ package vaultclient
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"github.com/je4/trustutil/v2/certificates"
 	"github.com/je4/trustutil/v2/config"
 	"github.com/je4/trustutil/v2/pkg/certutil"
 	"github.com/je4/trustutil/v2/pkg/vaultservice"
 	configutil "github.com/je4/utils/v2/pkg/config"
 	"github.com/rs/zerolog"
+	"github.com/smallstep/certinfo"
+	"io/fs"
+	"log"
 	"sync"
 	"testing"
 	"time"
@@ -97,18 +102,33 @@ func TestClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create client: %v", err)
 	}
-	c, err := client.GetClientCertificate()
+	certPEM, encryptedKeyPEM, err := client.GetClientCertificate()
 	if err != nil {
 		t.Fatalf("cannot get certificate: %v", err)
 	}
-	_ = c
-	/*
-		result, err := certinfo.CertificateText(c.)
-		if err != nil {
-			t.Fatalf("cannot get certificate text: %v", err)
-		}
-		log.Println("cert [0][0]")
-		log.Println(result)
+	pw, err := fs.ReadFile(certificates.CertFS, "test1.pw")
+	if err != nil {
+		t.Fatalf("cannot read password file: %v", err)
+	}
+	keyPEM, err := certutil.DecryptPrivateKey(encryptedKeyPEM, pw)
+	if err != nil {
+		t.Fatalf("cannot decrypt private key: %v", err)
+	}
+	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		t.Fatalf("cannot create key pair: %v", err)
+	}
+	_ = tlsCert
+	certPEMBlock, _ := pem.Decode(certPEM)
+	cert, err := x509.ParseCertificate(certPEMBlock.Bytes)
+	if err != nil {
+		t.Fatalf("cannot parse certificate: %v", err)
+	}
+	result, err := certinfo.CertificateText(cert)
+	if err != nil {
+		t.Fatalf("cannot get certificate text: %v", err)
+	}
+	log.Println("cert [0][0]")
+	log.Println(result)
 
-	*/
 }

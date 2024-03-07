@@ -189,7 +189,8 @@ func main() {
 	if err != nil {
 		logger.Fatal().Msgf("cannot create server certificate: %v", err)
 	}
-	ctrl, err := vaultservice.NewController(conf.LocalAddr, conf.ExternalAddr, "/", cert, caCert, caKey, conf.ClientCerts, logger, conf.Client)
+	certFS := os.DirFS(conf.ClientCerts)
+	ctrl, err := vaultservice.NewController(conf.LocalAddr, conf.ExternalAddr, "/", cert, caCert, caKey, certFS, logger, conf.Client)
 	if err != nil {
 		logger.Fatal().Msgf("cannot create controller: %v", err)
 	}

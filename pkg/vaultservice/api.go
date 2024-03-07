@@ -183,7 +183,7 @@ func (ctrl *controller) clientCert(c *gin.Context) {
 		NewResultMessage(c, http.StatusInternalServerError, errors.Errorf("cannot parse client ip %s", c.ClientIP()))
 		return
 	}
-	clientCert, clientKey, err := certutil.CreateCertificate(true, false, time.Duration(client.Validity), ctrl.ca, ctrl.caPrivKey, []net.IP{ip}, nil, nil, nil, name, certutil.DefaultKeyType)
+	clientCert, clientKey, err := certutil.CreateCertificate(true, false, time.Duration(client.Validity), ctrl.ca, ctrl.caPrivKey, []net.IP{ip}, nil, nil, client.URIs, name, certutil.DefaultKeyType)
 	if err != nil {
 		NewResultMessage(c, http.StatusInternalServerError, errors.Wrap(err, "cannot create client certificate"))
 		return

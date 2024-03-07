@@ -7,8 +7,8 @@ import (
 
 func NewClientCertResultMessage(ctx *gin.Context, clientCert, clientKey []byte) {
 	er := HTTPCertResult{
-		Cert: clientCert,
-		Key:  clientKey,
+		Cert:         clientCert,
+		EncryptedKey: clientKey,
 	}
 	ctx.JSON(http.StatusOK, er)
 }
@@ -32,7 +32,7 @@ Ievr3SDRdSF3RjC5TVUpmGUBU2pRQNCFulXfs/4Dp1Yf9f0cv6jL6t2AI/XxmTgC
 MQCooq/KjFB/+1TGoOIdZDBtkfKkbD3EIcnV3DvXMQ+4EOoorfGCxOR5Qx9lhPm1
 IAM=
 -----END CERTIFICATE-----"`
-	Key []byte `json:"key" example:"-----BEGIN ENCRYPTED PRIVATE KEY-----
+	EncryptedKey []byte `json:"key" example:"-----BEGIN ENCRYPTED PRIVATE KEY-----
 MIIBJTBgBgkqhkiG9w0BBQ0wUzAyBgkqhkiG9w0BBQwwJQQQgqKDgsoFu1GCaNfb
 dgNKrQIDCSfAMAwGCCqGSIb3DQIJBQAwHQYJYIZIAWUDBAEqBBBSKHkce2NWqrvQ
 H2+PWmsMBIHAWJnJ8mKC1sbO6aKrJtpnq5eYWWsu4wnOek2MsXCoeHmUGmYXFrcn

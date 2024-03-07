@@ -31,32 +31,27 @@ type Client struct {
 	baseURL string
 }
 
-func (c *Client) GetClientCertificate() (tls.Certificate, error) {
+func (c *Client) GetClientCertificate() (certPEM []byte, encryptedKeyPEM []byte, err error) {
 	resp, err := c.Get(c.baseURL + "/clientcert")
 	if err != nil {
-		return tls.Certificate{}, errors.Wrap(err, "cannot get client certificate")
+		return nil, nil, errors.Wrap(err, "cannot get client certificate")
 	}
 	defer resp.Body.Close()
 	buf := bytes.NewBuffer(nil)
 	_, err = buf.ReadFrom(resp.Body)
 	if err != nil {
-		return tls.Certificate{}, errors.Wrap(err, "cannot read client certificate")
+		return nil, nil, errors.Wrap(err, "cannot read client certificate")
 	}
 	if resp.StatusCode != http.StatusOK {
 		errMsg := &vaultservice.HTTPResultMessage{}
 		if err := json.Unmarshal(buf.Bytes(), errMsg); err != nil {
-			return tls.Certificate{}, errors.Wrap(err, "cannot unmarshal error message")
+			return nil, nil, errors.Wrap(err, "cannot unmarshal error message")
 		}
-		return tls.Certificate{}, errors.New(errMsg.Message)
+		return nil, nil, errors.New(errMsg.Message)
 	}
 	result := &vaultservice.HTTPCertResult{}
 	if err := json.Unmarshal(buf.Bytes(), result); err != nil {
-		return tls.Certificate{}, errors.Wrap(err, "cannot unmarshal client certificate")
+		return nil, nil, errors.Wrap(err, "cannot unmarshal client certificate")
 	}
-
-	cert, err := tls.X509KeyPair([]byte(result.Cert), []byte(result.Key))
-	if err != nil {
-		return tls.Certificate{}, errors.Wrap(err, "cannot create certificate key pair")
-	}
-	return cert, nil
+	return result.Cert, result.EncryptedKey, nil
 }
