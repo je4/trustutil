@@ -30,10 +30,36 @@ func printConnState(state *tls.ConnectionState, title string) {
 }
 
 func TestHTTPMTLSConfig(t *testing.T) {
-	serverTLSConf, err := CreateServerTLSConfigDefault(true, []string{"grpc:dummy"})
+	name := certutil.DefaultName
+	name.CommonName = "dummyServer"
+	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
+	if err != nil {
+		t.Fatalf("cannot decode ca: %v", err)
+	}
+	certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
+		false, true,
+		time.Hour*24*365*10,
+		defaultCA,
+		defaultCAPrivKey,
+		certutil.DefaultIPAddresses,
+		certutil.DefaultDNSNames,
+		nil,
+		nil,
+		name,
+		certutil.DefaultKeyType,
+	)
+	if err != nil {
+		t.Fatalf("cannot create server certificate: %v", err)
+	}
+	serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
+	if err != nil {
+		t.Fatalf("cannot create server certificate: %v", err)
+	}
+	serverTLSConf, err := CreateServerTLSConfig(serverCert, true, []string{"grpc:dummy"}, [][]byte{certutil.DefaultCACrt})
 	if err != nil {
 		t.Fatalf("cannot create server tls config: %v", err)
 	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		//printConnState(r.TLS, "Client")
@@ -41,11 +67,11 @@ func TestHTTPMTLSConfig(t *testing.T) {
 		w.Write([]byte("pong"))
 	})
 
-	serverCertChannel, err := UpgradeTLSConfigServerExchanger(serverTLSConf)
-	if err != nil {
+	serverCertChannel := make(chan *tls.Certificate)
+	defer close(serverCertChannel)
+	if err := UpgradeTLSConfigServerExchanger(serverTLSConf, serverCertChannel); err != nil {
 		t.Fatalf("cannot upgrade client tls config: %v", err)
 	}
-	defer close(serverCertChannel)
 
 	srv := http.Server{
 		Addr:      "localhost:12345",
@@ -55,15 +81,36 @@ func TestHTTPMTLSConfig(t *testing.T) {
 	go srv.ListenAndServeTLS("", "")
 	defer srv.Close()
 
-	clientTLSConf, err := CreateClientMTLSConfigDefault()
+	name = certutil.DefaultName
+	name.CommonName = "dummyClient"
+	clientCertPEM, clientCertPrivKeyPEM, err := certutil.CreateCertificate(
+		true, false,
+		time.Hour*24*365*10,
+		defaultCA,
+		defaultCAPrivKey,
+		certutil.DefaultIPAddresses,
+		certutil.DefaultDNSNames,
+		nil,
+		[]string{"grpc:dummy"},
+		name,
+		certutil.DefaultKeyType,
+	)
+	if err != nil {
+		t.Fatalf("cannot create client certificate: %v", err)
+	}
+	clientCert, err := tls.X509KeyPair(clientCertPEM, clientCertPrivKeyPEM)
+	if err != nil {
+		t.Fatalf("cannot create client certificate: %v", err)
+	}
+	clientTLSConf, err := CreateClientMTLSConfig(clientCert, [][]byte{certutil.DefaultCACrt})
 	if err != nil {
 		t.Fatalf("cannot create client tls config: %v", err)
 	}
-	clientCertChannel, err := UpgradeTLSConfigClientExchanger(clientTLSConf)
-	if err != nil {
+	clientCertChannel := make(chan *tls.Certificate)
+	defer close(clientCertChannel)
+	if err := UpgradeTLSConfigClientExchanger(clientTLSConf, clientCertChannel); err != nil {
 		t.Fatalf("cannot upgrade client tls config: %v", err)
 	}
-	defer close(clientCertChannel)
 	tr := http.Transport{
 		TLSClientConfig: clientTLSConf,
 	}
@@ -87,13 +134,9 @@ func TestHTTPMTLSConfig(t *testing.T) {
 	printConnState(resp.TLS, "Server")
 
 	// New certificate
-	name := certutil.DefaultName
+	name = certutil.DefaultName
 	name.CommonName = "dummyServer2"
-	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
-	if err != nil {
-		t.Fatalf("cannot decode ca: %v", err)
-	}
-	certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
+	certPEM, certPrivKeyPEM, err = certutil.CreateCertificate(
 		false, true,
 		time.Hour,
 		defaultCA,
@@ -108,7 +151,7 @@ func TestHTTPMTLSConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create client certificate: %v", err)
 	}
-	serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
+	serverCert, err = tls.X509KeyPair(certPEM, certPrivKeyPEM)
 	if err != nil {
 		t.Fatalf("cannot create client certificate: %v", err)
 	}
@@ -117,7 +160,7 @@ func TestHTTPMTLSConfig(t *testing.T) {
 	name = certutil.DefaultName
 	name.CommonName = "dummyClient2"
 
-	certPEM, certPrivKeyPEM, err = certutil.CreateCertificate(
+	clientCertPEM, clientCertPrivKeyPEM, err = certutil.CreateCertificate(
 		true, false,
 		time.Hour,
 		defaultCA,
@@ -132,7 +175,7 @@ func TestHTTPMTLSConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot create client tls config: %v", err)
 	}
-	clientCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
+	clientCert, err = tls.X509KeyPair(clientCertPEM, clientCertPrivKeyPEM)
 	if err != nil {
 		t.Fatalf("cannot create client certificate: %v", err)
 	}

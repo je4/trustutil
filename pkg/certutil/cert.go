@@ -37,26 +37,6 @@ func CreateCertificate(client, server bool, duration time.Duration, ca *x509.Cer
 		return nil, nil, errors.New("IP address and/or DNS name is required")
 	}
 
-	/*
-		caBlock, _ := pem.Decode(caPEM)
-		if caBlock == nil {
-			return nil, nil, errors.New("cannot decode CA PEM")
-		}
-		ca, err := x509.ParseCertificate(caBlock.Bytes)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "cannot parse CA certificate")
-		}
-		caPrivKeyBlock, _ := pem.Decode(caPrivKeyPEM)
-		if caPrivKeyBlock == nil {
-			return nil, nil, errors.New("cannot decode CA private key PEM")
-		}
-		caPrivKey, err := x509.ParsePKCS8PrivateKey(caPrivKeyBlock.Bytes)
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "cannot parse CA private key")
-		}
-
-	*/
-
 	// set up our server certificate
 	cert := &x509.Certificate{
 		SerialNumber: getSerial(),

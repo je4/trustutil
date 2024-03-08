@@ -59,6 +59,7 @@ func NewController(addr string, addrExt string, subpath string, cert tls.Certifi
 		router:      router,
 		client:      client,
 		clientCerts: clientCerts,
+		certChan:    make(chan *tls.Certificate),
 	}
 	return ctrl, ctrl.Init(cert)
 }
@@ -92,8 +93,8 @@ func (ctrl *controller) Init(cert tls.Certificate) error {
 	tlsConfig.RootCAs.AddCert(ctrl.ca)
 	tlsConfig.ClientCAs = x509.NewCertPool()
 	tlsConfig.ClientCAs.AddCert(ctrl.ca)
-	ctrl.certChan, err = tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig)
-	if err != nil {
+
+	if err = tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig, ctrl.certChan); err != nil {
 		return errors.Wrap(err, "cannot upgrade tls config")
 	}
 	ctrl.server = http.Server{
