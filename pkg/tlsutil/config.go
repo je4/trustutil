@@ -4,7 +4,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"emperror.dev/errors"
+	"github.com/je4/trustutil/v2/pkg/certutil"
 	"slices"
+	"time"
 )
 
 func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, clientCAPEMs [][]byte) (*tls.Config, error) {
@@ -81,4 +83,37 @@ func CreateClientMTLSConfig(clientCert tls.Certificate, caPEMs [][]byte) (*tls.C
 	}
 
 	return clientTLSConf, nil
+}
+
+func CreateDefaultServerTLSConfig(commonName string) (*tls.Config, error) {
+	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot decode default ca certificate")
+	}
+	name := certutil.DefaultName
+	name.CommonName = commonName
+	certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
+		false,
+		true,
+		time.Hour*24,
+		defaultCA,
+		defaultCAPrivKey,
+		certutil.DefaultIPAddresses,
+		certutil.DefaultDNSNames,
+		nil,
+		nil,
+		name,
+		certutil.DefaultKeyType)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create server certificate")
+	}
+	serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create server certificate from key pair")
+	}
+	tlsConfig, err := CreateServerTLSConfig(serverCert, true, nil, [][]byte{certutil.DefaultCACrt})
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create server tls config")
+	}
+	return tlsConfig, nil
 }

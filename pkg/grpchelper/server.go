@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"emperror.dev/errors"
+	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -20,6 +21,14 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 		return nil, errors.Wrapf(err, "cannot listen on %s", addr)
 	}
 	interceptor := NewInterceptor(logger)
+
+	if tlsConfig == nil {
+		tlsConfig, err = tlsutil.CreateDefaultServerTLSConfig("devServer")
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot create default server TLS config")
+		}
+	}
+
 	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.serverInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{

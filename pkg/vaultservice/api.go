@@ -85,7 +85,7 @@ func (ctrl *controller) Init(cert tls.Certificate) error {
 	ctrl.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	//ctrl.router.StaticFS("/swagger/", http.FS(swaggerFiles.FS))
 
-	tlsConfig, err := tlsutil.CreateServerTLSConfig(cert, true, []string{"cert:clientcert"})
+	tlsConfig, err := tlsutil.CreateServerTLSConfig(cert, true, []string{"cert:clientcert"}, [][]byte{ctrl.ca})
 	if err != nil {
 		return errors.Wrap(err, "cannot create tls config")
 	}
