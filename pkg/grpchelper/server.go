@@ -3,12 +3,13 @@ package grpchelper
 import (
 	"context"
 	"crypto/tls"
+	"net"
+
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"net"
 )
 
 func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
@@ -21,7 +22,6 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 		return nil, errors.Wrapf(err, "cannot listen on %s", addr)
 	}
 	interceptor := NewInterceptor(logger)
-
 	if tlsConfig == nil {
 		tlsConfig, err = tlsutil.CreateDefaultServerTLSConfig("devServer")
 		if err != nil {
@@ -29,7 +29,7 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 		}
 	}
 
-	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.serverInterceptor))
+	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.serverInterceptor), grpc.StreamInterceptor(StreamServerInterceptor()))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		Server:   grpcServer,
@@ -47,14 +47,14 @@ type Server struct {
 
 func (s *Server) Startup() {
 
-	go func() {
-		s.logger.Info().Msg("starting server")
-		if err := s.Server.Serve(s.listener); err != nil {
-			s.logger.Error().Err(err).Msg("cannot serve")
-		} else {
-			s.logger.Info().Msg("server stopped")
-		}
-	}()
+	// go func() {
+	s.logger.Info().Msg("starting server")
+	if err := s.Server.Serve(s.listener); err != nil {
+		s.logger.Error().Err(err).Msg("cannot serve")
+	} else {
+		s.logger.Info().Msg("server stopped")
+	}
+	// }()
 }
 
 func (s *Server) Shutdown() error {
