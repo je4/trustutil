@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts ...grpc.ServerOption, withInterceptor bool) (*Server, error) {
+func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, withInterceptor bool, opts ...grpc.ServerOption) (*Server, error) {
 	listenConfig := &net.ListenConfig{
 		Control:   nil,
 		KeepAlive: 0,
