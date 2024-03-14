@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
+func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts ...grpc.ServerOption, withInterceptor bool) (*Server, error) {
 	listenConfig := &net.ListenConfig{
 		Control:   nil,
 		KeepAlive: 0,
@@ -29,7 +29,12 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 		}
 	}
 
-	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.serverInterceptor), grpc.StreamInterceptor(StreamServerInterceptor()))
+	if withInterceptor {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.serverInterceptor), grpc.StreamInterceptor(StreamServerInterceptor()))
+	} else {
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	}
+
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		Server:   grpcServer,
