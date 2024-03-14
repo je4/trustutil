@@ -43,7 +43,7 @@ func CreateCertificate(client, server bool, duration time.Duration, ca *x509.Cer
 		Subject:      *name,
 		IPAddresses:  ips,
 		DNSNames:     dnsNames,
-		NotBefore:    time.Now(),
+		NotBefore:    time.Now().UTC(),
 		NotAfter:     time.Now().UTC().Add(duration),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
 		ExtKeyUsage:  []x509.ExtKeyUsage{},

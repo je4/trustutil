@@ -1,0 +1,85 @@
+package loader
+
+import (
+	"crypto/tls"
+	"emperror.dev/errors"
+	"github.com/je4/trustutil/v2/pkg/tlsutil"
+	"github.com/je4/utils/v2/pkg/zLogger"
+	"io"
+	"strings"
+	"time"
+)
+
+type Loader interface {
+	io.Closer
+	Start() error
+	GetCA() []byte
+}
+
+func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, logger zLogger.ZLogger) (l Loader, err error) {
+	switch strings.ToUpper(conf.Type) {
+	case "ENV":
+		l = NewEnvLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
+	case "FILE":
+		l = NewFileLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
+	case "SERVICE":
+		return nil, errors.New("loader type SERVICE not implemented")
+	case "DEV":
+		return nil, errors.New("loader type SELF not implemented")
+	default:
+		err = errors.Errorf("unknown loader type %s", conf.Type)
+		return
+	}
+	go func() {
+		if err := l.Start(); err != nil {
+			logger.Error().Err(err).Msg("error starting loader")
+		} else {
+			logger.Info().Msg("loader stopped")
+		}
+	}()
+	return
+}
+
+func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
+	certChannel := make(chan *tls.Certificate)
+	l, err = initLoader(conf, certChannel, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot create loader")
+	}
+	var cert *tls.Certificate
+	select {
+	case cert = <-certChannel:
+	case <-time.After(5 * time.Second):
+		return nil, nil, errors.New("timeout waiting for initial certificate")
+	}
+	tlsConfig, err = tlsutil.CreateServerTLSConfig(*cert, mutual, uris, [][]byte{l.GetCA()})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot create server tls config")
+	}
+	if err := tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig, certChannel); err != nil {
+		return nil, nil, errors.Wrap(err, "cannot upgrade tls config")
+	}
+	return
+}
+
+func CreateClientLoader(conf *TLSConfig, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
+	certChannel := make(chan *tls.Certificate)
+	l, err = initLoader(conf, certChannel, logger)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot create loader")
+	}
+	var cert *tls.Certificate
+	select {
+	case cert = <-certChannel:
+	case <-time.After(5 * time.Second):
+		return nil, nil, errors.New("timeout waiting for initial certificate")
+	}
+	tlsConfig, err = tlsutil.CreateClientMTLSConfig(*cert, [][]byte{l.GetCA()})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot create server tls config")
+	}
+	if err := tlsutil.UpgradeTLSConfigClientExchanger(tlsConfig, certChannel); err != nil {
+		return nil, nil, errors.Wrap(err, "cannot upgrade tls config")
+	}
+	return
+}
