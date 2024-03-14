@@ -22,10 +22,8 @@ func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, logger zLogg
 		l = NewEnvLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
 	case "FILE":
 		l = NewFileLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
-	case "SERVICE":
-		return nil, errors.New("loader type SERVICE not implemented")
 	case "DEV":
-		return nil, errors.New("loader type SELF not implemented")
+		l = NewDevLoader(certChannel)
 	default:
 		err = errors.Errorf("unknown loader type %s", conf.Type)
 		return
