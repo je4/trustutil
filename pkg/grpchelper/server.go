@@ -48,7 +48,7 @@ type Server struct {
 func (s *Server) Startup() {
 
 	go func() {
-		s.logger.Info().Msg("starting server")
+		s.logger.Info().Msgf("starting server at %s", s.listener.Addr().String())
 		if err := s.Server.Serve(s.listener); err != nil {
 			s.logger.Error().Err(err).Msg("cannot serve")
 		} else {

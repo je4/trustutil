@@ -16,19 +16,20 @@ type Loader interface {
 	GetCA() []byte
 }
 
-func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, logger zLogger.ZLogger) (l Loader, err error) {
+func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, client bool, logger zLogger.ZLogger) (l Loader, err error) {
 	switch strings.ToUpper(conf.Type) {
 	case "ENV":
-		l = NewEnvLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
+		l = NewEnvLoader(certChannel, client, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
 	case "FILE":
-		l = NewFileLoader(certChannel, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
+		l = NewFileLoader(certChannel, client, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
 	case "DEV":
-		l = NewDevLoader(certChannel)
+		l = NewDevLoader(certChannel, client)
 	default:
 		err = errors.Errorf("unknown loader type %s", conf.Type)
 		return
 	}
 	go func() {
+		logger.Info().Msg("starting loader")
 		if err := l.Start(); err != nil {
 			logger.Error().Err(err).Msg("error starting loader")
 		} else {
@@ -40,7 +41,7 @@ func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, logger zLogg
 
 func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
 	certChannel := make(chan *tls.Certificate)
-	l, err = initLoader(conf, certChannel, logger)
+	l, err = initLoader(conf, certChannel, false, logger)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot create loader")
 	}
@@ -62,7 +63,7 @@ func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLog
 
 func CreateClientLoader(conf *TLSConfig, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
 	certChannel := make(chan *tls.Certificate)
-	l, err = initLoader(conf, certChannel, logger)
+	l, err = initLoader(conf, certChannel, true, logger)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot create loader")
 	}

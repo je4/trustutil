@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func NewFileLoader(certChannel chan *tls.Certificate, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *FileLoader {
+func NewFileLoader(certChannel chan *tls.Certificate, client bool, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *FileLoader {
 	l := &FileLoader{
 		certChannel: certChannel,
 		cert:        cert,

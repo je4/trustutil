@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func NewEnvLoader(certChannel chan *tls.Certificate, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *EnvLoader {
+func NewEnvLoader(certChannel chan *tls.Certificate, client bool, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *EnvLoader {
 	return &EnvLoader{
 		certChannel: certChannel,
 		cert:        cert,

@@ -46,7 +46,7 @@ func (i *Interceptor) serverInterceptor(ctx context.Context,
 	uri := "grpc:" + matches[1]
 	ok = false
 	for _, u := range v.URIs {
-		if u.String() == uri {
+		if u.String() == uri || u.String() == "*" {
 			ok = true
 			break
 		}
