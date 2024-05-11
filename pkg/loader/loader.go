@@ -61,7 +61,7 @@ func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLog
 	return
 }
 
-func CreateClientLoader(conf *TLSConfig, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
+func CreateClientLoader(conf *TLSConfig, logger zLogger.ZLogger, hosts ...string) (tlsConfig *tls.Config, l Loader, err error) {
 	certChannel := make(chan *tls.Certificate)
 	l, err = initLoader(conf, certChannel, true, logger)
 	if err != nil {

@@ -27,7 +27,15 @@ var DefaultName = &pkix.Name{
 
 var DefaultDNSNames = []string{"localhost"}
 
+func SetDefaultDNSNames(names []string) {
+	DefaultDNSNames = names
+}
+
 var DefaultIPAddresses = []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback}
+
+var SetDefaultIPAddresses = func(ips []net.IP) {
+	DefaultIPAddresses = ips
+}
 
 var DefaultDuration = time.Hour * 24 * 365 * 10
 
