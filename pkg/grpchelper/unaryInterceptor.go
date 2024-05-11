@@ -22,7 +22,7 @@ type Interceptor struct {
 
 var methodRegexp = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 
-func (i *Interceptor) serverInterceptor(ctx context.Context,
+func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler) (interface{}, error) {
