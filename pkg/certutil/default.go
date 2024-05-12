@@ -27,13 +27,13 @@ var DefaultName = &pkix.Name{
 
 var DefaultDNSNames = []string{"localhost"}
 
-func AddDefaultDNSNames(names []string) {
+func AddDefaultDNSNames(names ...string) {
 	DefaultDNSNames = append(DefaultDNSNames, names...)
 }
 
 var DefaultIPAddresses = []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback}
 
-var AddDefaultIPAddresses = func(ips []net.IP) {
+var AddDefaultIPAddresses = func(ips ...net.IP) {
 	DefaultIPAddresses = append(DefaultIPAddresses, ips...)
 }
 
