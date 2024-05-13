@@ -3,8 +3,8 @@ package certutil
 import (
 	"crypto/x509/pkix"
 	_ "embed"
-	"emperror.dev/errors"
 	"net"
+	"slices"
 	"time"
 )
 
@@ -28,32 +28,15 @@ var DefaultName = &pkix.Name{
 var DefaultDNSNames = []string{"localhost"}
 
 func AddDefaultDNSNames(names ...string) {
-	DefaultDNSNames = append(DefaultDNSNames, names...)
+	DefaultDNSNames = slices.Compact(append(DefaultDNSNames, names...))
 }
 
 var DefaultIPAddresses = []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback}
 
 var AddDefaultIPAddresses = func(ips ...net.IP) {
-	DefaultIPAddresses = append(DefaultIPAddresses, ips...)
+	DefaultIPAddresses = slices.CompactFunc(append(DefaultIPAddresses, ips...), func(i1, i2 net.IP) bool {
+		return i1.String() == i2.String()
+	})
 }
 
 var DefaultDuration = time.Hour * 24 * 365 * 10
-
-func _CreateDefaultCertificate(client, server bool, uris []string) (certPEM []byte, certPrivKeyPEM []byte, err error) {
-	defaultCA, defaultCAPrivKey, err := CertificateKeyFromPEM(DefaultCACrt, DefaultCAKey, nil)
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
-	}
-	return CreateCertificate(
-		client, server,
-		DefaultDuration,
-		defaultCA,
-		defaultCAPrivKey,
-		DefaultIPAddresses,
-		DefaultDNSNames,
-		nil,
-		uris,
-		DefaultName,
-		DefaultKeyType,
-	)
-}
