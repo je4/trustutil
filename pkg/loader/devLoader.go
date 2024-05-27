@@ -2,9 +2,10 @@ package loader
 
 import (
 	"crypto/tls"
+	"time"
+
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/certutil"
-	"time"
 )
 
 func NewDevLoader(certChannel chan *tls.Certificate, client bool) Loader {
@@ -44,7 +45,7 @@ func (d *devLoader) Start() error {
 		certutil.DefaultIPAddresses,
 		certutil.DefaultDNSNames,
 		nil,
-		[]string{"*"},
+		certutil.DefaultURIs,
 		name,
 		certutil.DefaultKeyType)
 	if err != nil {
