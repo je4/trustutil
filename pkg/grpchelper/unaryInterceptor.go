@@ -61,7 +61,7 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	h, err := handler(ctx, req)
 
 	// Logging with grpclog (grpclog.LoggerV2)
-	i.logger.Debug().Msgf("Request - Method:%s\tDuration:%s\tError:%v\n",
+	i.logger.Debug().Msgf("Request - Method:%s\tDuration:%s\tError:%v",
 		info.FullMethod,
 		time.Since(start),
 		err)
