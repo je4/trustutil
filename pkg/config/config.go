@@ -1,4 +1,4 @@
-package loader
+package config
 
 import configutil "github.com/je4/utils/v2/pkg/config"
 

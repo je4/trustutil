@@ -3,9 +3,11 @@ package loader
 import (
 	"crypto/tls"
 	"emperror.dev/errors"
+	"github.com/je4/trustutil/v2/pkg/config"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"io"
+	"log"
 	"strings"
 	"time"
 )
@@ -16,7 +18,7 @@ type Loader interface {
 	GetCA() []byte
 }
 
-func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, client bool, logger zLogger.ZLogger) (l Loader, err error) {
+func initLoader(conf *config.TLSConfig, certChannel chan *tls.Certificate, client bool, logger zLogger.ZLogger) (l Loader, err error) {
 	switch strings.ToUpper(conf.Type) {
 	case "ENV":
 		l = NewEnvLoader(certChannel, client, conf.Cert, conf.Key, conf.CA, time.Duration(conf.Interval), logger)
@@ -29,17 +31,29 @@ func initLoader(conf *TLSConfig, certChannel chan *tls.Certificate, client bool,
 		return
 	}
 	go func() {
-		logger.Info().Msg("starting loader")
-		if err := l.Start(); err != nil {
-			logger.Error().Err(err).Msg("error starting loader")
+		if logger != nil {
+			logger.Info().Msg("starting loader")
 		} else {
-			logger.Info().Msg("loader stopped")
+			log.Printf("starting loader\n")
+		}
+		if err := l.Start(); err != nil {
+			if logger != nil {
+				logger.Error().Err(err).Msg("error starting loader")
+			} else {
+				log.Printf("error starting loader: %v\n", err)
+			}
+		} else {
+			if logger != nil {
+				logger.Info().Msg("loader stopped")
+			} else {
+				log.Printf("loader stopped\n")
+			}
 		}
 	}()
 	return
 }
 
-func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
+func CreateServerLoader(mutual bool, conf *config.TLSConfig, uris []string, logger zLogger.ZLogger) (tlsConfig *tls.Config, l Loader, err error) {
 	certChannel := make(chan *tls.Certificate)
 	l, err = initLoader(conf, certChannel, false, logger)
 	if err != nil {
@@ -61,7 +75,7 @@ func CreateServerLoader(mutual bool, conf *TLSConfig, uris []string, logger zLog
 	return
 }
 
-func CreateClientLoader(conf *TLSConfig, logger zLogger.ZLogger, hosts ...string) (tlsConfig *tls.Config, l Loader, err error) {
+func CreateClientLoader(conf *config.TLSConfig, logger zLogger.ZLogger, hosts ...string) (tlsConfig *tls.Config, l Loader, err error) {
 	certChannel := make(chan *tls.Certificate)
 	l, err = initLoader(conf, certChannel, true, logger)
 	if err != nil {
