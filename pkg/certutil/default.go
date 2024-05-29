@@ -40,3 +40,10 @@ var AddDefaultIPAddresses = func(ips ...net.IP) {
 }
 
 var DefaultDuration = time.Hour * 24 * 365 * 10
+
+var DefaultURIs = []string{"*"}
+
+func OverrideDefaultURIs(uris ...string) {
+	DefaultURIs = []string{}
+	DefaultURIs = slices.Compact(append(DefaultURIs, uris...))
+}
