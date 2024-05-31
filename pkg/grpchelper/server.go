@@ -46,8 +46,8 @@ type Server struct {
 	logger   zLogger.ZLogger
 }
 
-func (s *Server) GetAddr() net.Addr {
-	return s.listener.Addr()
+func (s *Server) GetAddr() string {
+	return s.listener.Addr().String()
 }
 
 func (s *Server) Startup() {
