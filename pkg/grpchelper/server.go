@@ -46,7 +46,7 @@ type Server struct {
 	logger   zLogger.ZLogger
 }
 
-func (s *Server) Addr() net.Addr {
+func (s *Server) GetAddr() net.Addr {
 	return s.listener.Addr()
 }
 
