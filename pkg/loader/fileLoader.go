@@ -2,10 +2,11 @@ package loader
 
 import (
 	"crypto/tls"
-	"emperror.dev/errors"
-	"github.com/je4/utils/v2/pkg/zLogger"
 	"os"
 	"time"
+
+	"emperror.dev/errors"
+	"github.com/je4/utils/v2/pkg/zLogger"
 )
 
 func NewFileLoader(certChannel chan *tls.Certificate, client bool, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *FileLoader {
@@ -80,6 +81,14 @@ func (f *FileLoader) Close() error {
 func (f *FileLoader) Start() (err error) {
 	if f.caPEM, err = os.ReadFile(f.ca); err != nil {
 		return errors.Wrapf(err, "cannot read ca file %s", f.ca)
+	}
+	_, err = os.Stat(f.cert)
+	if err != nil {
+		return errors.Wrapf(err, "cannot read cert file %s", f.cert)
+	}
+	_, err = os.Stat(f.key)
+	if err != nil {
+		return errors.Wrapf(err, "cannot read key file %s", f.key)
 	}
 	for {
 		isNew, err := f.isNew()
