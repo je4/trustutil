@@ -73,6 +73,7 @@ type controller struct {
 	client      []*config.MiniVaultClientConfig
 	clientCerts fs.FS
 	ca          *x509.Certificate
+	caPEM       []byte
 	caPrivKey   any
 	certChan    chan *tls.Certificate
 }
@@ -85,7 +86,7 @@ func (ctrl *controller) Init(cert tls.Certificate) error {
 	ctrl.router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	//ctrl.router.StaticFS("/swagger/", http.FS(swaggerFiles.FS))
 
-	tlsConfig, err := tlsutil.CreateServerTLSConfig(cert, true, []string{"cert:clientcert"}, [][]byte{ctrl.ca})
+	tlsConfig, err := tlsutil.CreateServerTLSConfig(cert, true, []string{"cert:clientcert"}, [][]byte{ctrl.caPEM})
 	if err != nil {
 		return errors.Wrap(err, "cannot create tls config")
 	}
@@ -94,7 +95,7 @@ func (ctrl *controller) Init(cert tls.Certificate) error {
 	tlsConfig.ClientCAs = x509.NewCertPool()
 	tlsConfig.ClientCAs.AddCert(ctrl.ca)
 
-	if err = tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig, ctrl.certChan); err != nil {
+	if err = tlsutil.UpgradeTLSConfigServerExchanger(tlsConfig, ctrl.certChan, ctrl.logger); err != nil {
 		return errors.Wrap(err, "cannot upgrade tls config")
 	}
 	ctrl.server = http.Server{

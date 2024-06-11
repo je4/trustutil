@@ -2,39 +2,56 @@ package loader
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"emperror.dev/errors"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"os"
 	"time"
 )
 
-func NewFileLoader(certChannel chan *tls.Certificate, client bool, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *FileLoader {
+func NewFileLoader(certChannel chan *tls.Certificate, client bool, cert, key string, ca []string, useSystemCertPool bool, interval time.Duration, logger zLogger.ZLogger) (*FileLoader, error) {
 	l := &FileLoader{
 		certChannel: certChannel,
 		cert:        cert,
 		key:         key,
-		ca:          ca,
+		caCertPool:  x509.NewCertPool(),
 		interval:    interval,
 		done:        make(chan bool),
 		logger:      logger,
 	}
-	return l
+	if useSystemCertPool {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get system cert pool")
+		}
+		l.caCertPool = systemCertPool
+	}
+	for _, caName := range ca {
+		pemData, err := os.ReadFile(caName)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot read ca file %s", ca)
+		}
+		if !l.caCertPool.AppendCertsFromPEM(pemData) {
+			return nil, errors.Errorf("cannot append ca from %s", caName)
+		}
+	}
+
+	return l, nil
 }
 
 type FileLoader struct {
 	certChannel chan *tls.Certificate
 	cert        string
 	key         string
-	ca          string
-	caPEM       []byte
+	caCertPool  *x509.CertPool
 	lastCheck   time.Time
 	done        chan bool
 	interval    time.Duration
 	logger      zLogger.ZLogger
 }
 
-func (f *FileLoader) GetCA() []byte {
-	return f.caPEM
+func (f *FileLoader) GetCA() *x509.CertPool {
+	return f.caCertPool
 }
 
 func (f *FileLoader) isNew() (bool, error) {
@@ -78,25 +95,25 @@ func (f *FileLoader) Close() error {
 }
 
 func (f *FileLoader) Start() (err error) {
-	if f.caPEM, err = os.ReadFile(f.ca); err != nil {
-		return errors.Wrapf(err, "cannot read ca file %s", f.ca)
-	}
-	for {
-		isNew, err := f.isNew()
-		if err != nil {
-			f.logger.Error().Err(err).Msg("cannot check if new")
-		} else if isNew {
-			err = f.load()
+
+	go func() {
+		for {
+			isNew, err := f.isNew()
 			if err != nil {
-				f.logger.Error().Err(err).Msg("cannot load")
+				f.logger.Error().Err(err).Msg("cannot check if new")
+			} else if isNew {
+				err = f.load()
+				if err != nil {
+					f.logger.Error().Err(err).Msg("cannot load")
+				}
+			}
+			select {
+			case <-f.done:
+				return
+			case <-time.After(f.interval):
 			}
 		}
-		select {
-		case <-f.done:
-			break
-		case <-time.After(f.interval):
-		}
-	}
+	}()
 	return nil
 }
 

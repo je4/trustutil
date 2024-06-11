@@ -2,25 +2,41 @@ package loader
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"log"
 	"time"
 
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/certutil"
 )
 
-func NewDevLoader(certChannel chan *tls.Certificate, client bool) Loader {
+func NewDevLoader(certChannel chan *tls.Certificate, client bool, useSystemCertPool bool, interval time.Duration) (Loader, error) {
 	l := &devLoader{
 		certChannel: certChannel,
 		client:      client,
 		done:        make(chan bool),
+		interval:    interval,
+		caCertPool:  x509.NewCertPool(),
 	}
-	return l
+	if useSystemCertPool {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get system cert pool")
+		}
+		l.caCertPool = systemCertPool
+	}
+	if !l.caCertPool.AppendCertsFromPEM(certutil.DefaultCACrt) {
+		return nil, errors.Errorf("cannot append ca from default ca")
+	}
+	return l, nil
 }
 
 type devLoader struct {
 	certChannel chan *tls.Certificate
 	client      bool
 	done        chan bool
+	interval    time.Duration
+	caCertPool  *x509.CertPool
 }
 
 func (d *devLoader) Close() error {
@@ -36,33 +52,44 @@ func (d *devLoader) Start() error {
 		return errors.Wrap(err, "cannot decode default ca certificate")
 	}
 	name := certutil.DefaultName
-	certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
-		d.client,
-		!d.client,
-		time.Hour*24,
-		defaultCA,
-		defaultCAPrivKey,
-		certutil.DefaultIPAddresses,
-		certutil.DefaultDNSNames,
-		nil,
-		certutil.DefaultURIs,
-		name,
-		certutil.DefaultKeyType)
-	if err != nil {
-		return errors.Wrap(err, "cannot create server certificate")
-	}
-	serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
-	if err != nil {
-		return errors.Wrap(err, "cannot create server certificate from key pair")
-	}
 
-	d.certChannel <- &serverCert
-	<-d.done
+	go func() {
+		for {
+			certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
+				d.client,
+				!d.client,
+				time.Duration(float64(d.interval)*1.1),
+				defaultCA,
+				defaultCAPrivKey,
+				certutil.DefaultIPAddresses,
+				certutil.DefaultDNSNames,
+				nil,
+				certutil.DefaultURIs,
+				name,
+				certutil.DefaultKeyType)
+			if err != nil {
+				log.Printf("cannot create server certificate: %v", err)
+			} else {
+				serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
+				if err != nil {
+					log.Printf("cannot create server certificate from key pair: %v", err)
+				} else {
+					d.certChannel <- &serverCert
+				}
+			}
+			select {
+			case <-d.done:
+				break
+			case <-time.After(d.interval):
+			}
+		}
+	}()
+
 	return nil
 }
 
-func (d *devLoader) GetCA() []byte {
-	return certutil.DefaultCACrt
+func (d *devLoader) GetCA() *x509.CertPool {
+	return d.caCertPool
 }
 
 var _ Loader = (*devLoader)(nil)

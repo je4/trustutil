@@ -2,39 +2,53 @@ package loader
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"emperror.dev/errors"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"os"
 	"time"
 )
 
-func NewEnvLoader(certChannel chan *tls.Certificate, client bool, cert, key, ca string, interval time.Duration, logger zLogger.ZLogger) *EnvLoader {
-	return &EnvLoader{
+func NewEnvLoader(certChannel chan *tls.Certificate, client bool, cert, key string, ca []string, useSystemCertPool bool, interval time.Duration, logger zLogger.ZLogger) (*EnvLoader, error) {
+	l := &EnvLoader{
 		certChannel: certChannel,
 		cert:        cert,
 		key:         key,
-		ca:          ca,
+		caCertPool:  x509.NewCertPool(),
 		interval:    interval,
 		done:        make(chan bool),
 		logger:      logger,
 	}
+	if useSystemCertPool {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get system cert pool")
+		}
+		l.caCertPool = systemCertPool
+	}
+	for _, c := range ca {
+		if !l.caCertPool.AppendCertsFromPEM([]byte(os.Getenv(c))) {
+			return nil, errors.Errorf("cannot append ca from %s", c)
+		}
+	}
+
+	return l, nil
 }
 
 type EnvLoader struct {
 	certChannel chan *tls.Certificate
 	cert        string
 	key         string
-	ca          string
 	certPEM     string
 	keyPEM      string
-	caPEM       []byte
 	done        chan bool
 	interval    time.Duration
 	logger      zLogger.ZLogger
+	caCertPool  *x509.CertPool
 }
 
-func (f *EnvLoader) GetCA() []byte {
-	return f.caPEM
+func (f *EnvLoader) GetCA() *x509.CertPool {
+	return f.caCertPool
 }
 
 func (f *EnvLoader) load() error {
@@ -66,7 +80,6 @@ func (f *EnvLoader) Close() error {
 }
 
 func (f *EnvLoader) Start() error {
-	f.caPEM = []byte(os.Getenv(f.ca))
 	go func() {
 		for {
 			if err := f.load(); err != nil {

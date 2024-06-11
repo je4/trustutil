@@ -24,7 +24,7 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 	interceptor := NewInterceptor(logger)
 
 	if tlsConfig == nil {
-		tlsConfig, err = tlsutil.CreateDefaultServerTLSConfig("devServer")
+		tlsConfig, err = tlsutil.CreateDefaultServerTLSConfig("devServer", true)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot create default server TLS config")
 		}

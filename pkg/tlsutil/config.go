@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, clientCAPEMs [][]byte) (*tls.Config, error) {
+func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caCertPool *x509.CertPool) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS12,
@@ -62,30 +62,19 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, cli
 			}
 		}
 	}
-	if len(clientCAPEMs) > 0 {
-		clientCAPool := x509.NewCertPool()
-		for _, caPEM := range clientCAPEMs {
-			clientCAPool.AppendCertsFromPEM(caPEM)
-		}
-		tlsConfig.ClientCAs = clientCAPool
-	}
 	return tlsConfig, nil
 }
 
-func CreateClientMTLSConfig(clientCert tls.Certificate, caPEMs [][]byte) (*tls.Config, error) {
-	certPool := x509.NewCertPool()
-	for _, caPEM := range caPEMs {
-		certPool.AppendCertsFromPEM(caPEM)
-	}
+func CreateClientMTLSConfig(clientCert tls.Certificate, caCertPool *x509.CertPool) (*tls.Config, error) {
 	clientTLSConf := &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
-		RootCAs:      certPool,
+		RootCAs:      caCertPool,
 	}
 
 	return clientTLSConf, nil
 }
 
-func CreateDefaultServerTLSConfig(commonName string) (*tls.Config, error) {
+func CreateDefaultServerTLSConfig(commonName string, useSystemCertPool bool) (*tls.Config, error) {
 	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot decode default ca certificate")
@@ -107,11 +96,24 @@ func CreateDefaultServerTLSConfig(commonName string) (*tls.Config, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create server certificate")
 	}
+
+	certPool := x509.NewCertPool()
+	if useSystemCertPool {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, errors.Wrap(err, "cannot get system cert pool")
+		}
+		certPool = systemCertPool
+	}
+	if !certPool.AppendCertsFromPEM(certutil.DefaultCACrt) {
+		return nil, errors.New("cannot append ca from default ca")
+	}
+
 	serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create server certificate from key pair")
 	}
-	tlsConfig, err := CreateServerTLSConfig(serverCert, true, nil, [][]byte{certutil.DefaultCACrt})
+	tlsConfig, err := CreateServerTLSConfig(serverCert, true, nil, certPool)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create server tls config")
 	}
