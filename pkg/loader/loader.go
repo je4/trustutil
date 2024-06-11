@@ -77,8 +77,6 @@ func CreateServerLoader(mutual bool, conf *config.TLSConfig, uris []string, logg
 			if info, err := certinfo.CertificateText(c); err == nil {
 				if logger != nil {
 					logger.Debug().Msgf("server certificate loaded: %s", info)
-				} else {
-					log.Printf("server certificate loaded:\n%s\n", info)
 				}
 			} else {
 				if logger != nil {
@@ -116,8 +114,6 @@ func CreateClientLoader(conf *config.TLSConfig, logger zLogger.ZLogger, hosts ..
 			if info, err := certinfo.CertificateText(c); err == nil {
 				if logger != nil {
 					logger.Debug().Msgf("client certificate loaded: %s", info)
-				} else {
-					log.Printf("client certificate loaded:\n%s\n", info)
 				}
 			} else {
 				if logger != nil {
