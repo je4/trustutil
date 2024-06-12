@@ -21,7 +21,8 @@ func NewServer(addr string, tlsConfig *tls.Config, logger zLogger.ZLogger, opts 
 		return nil, errors.Wrapf(err, "cannot listen on %s", addr)
 	}
 	logger.Info().Msgf("listening on %s", lis.Addr().String())
-	interceptor := NewInterceptor(logger)
+	l2 := logger.With().Str("addr", lis.Addr().String()).Logger()
+	interceptor := NewInterceptor(&l2)
 
 	if tlsConfig == nil {
 		tlsConfig, err = tlsutil.CreateDefaultServerTLSConfig("devServer", true)

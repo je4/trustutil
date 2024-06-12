@@ -94,27 +94,23 @@ func (f *FileLoader) Close() error {
 	return nil
 }
 
-func (f *FileLoader) Start() (err error) {
-
-	go func() {
-		for {
-			isNew, err := f.isNew()
+func (f *FileLoader) Run() error {
+	for {
+		isNew, err := f.isNew()
+		if err != nil {
+			f.logger.Error().Err(err).Msg("cannot check if new")
+		} else if isNew {
+			err = f.load()
 			if err != nil {
-				f.logger.Error().Err(err).Msg("cannot check if new")
-			} else if isNew {
-				err = f.load()
-				if err != nil {
-					f.logger.Error().Err(err).Msg("cannot load")
-				}
-			}
-			select {
-			case <-f.done:
-				return
-			case <-time.After(f.interval):
+				f.logger.Error().Err(err).Msg("cannot load")
 			}
 		}
-	}()
-	return nil
+		select {
+		case <-f.done:
+			return nil
+		case <-time.After(f.interval):
+		}
+	}
 }
 
 var _ Loader = (*FileLoader)(nil)

@@ -79,20 +79,17 @@ func (f *EnvLoader) Close() error {
 	return nil
 }
 
-func (f *EnvLoader) Start() error {
-	go func() {
-		for {
-			if err := f.load(); err != nil {
-				f.logger.Error().Err(err).Msg("cannot load")
-			}
-			select {
-			case <-f.done:
-				return
-			case <-time.After(f.interval):
-			}
+func (f *EnvLoader) Run() error {
+	for {
+		if err := f.load(); err != nil {
+			f.logger.Error().Err(err).Msg("cannot load")
 		}
-	}()
-	return nil
+		select {
+		case <-f.done:
+			return nil
+		case <-time.After(f.interval):
+		}
+	}
 }
 
 var _ Loader = (*EnvLoader)(nil)

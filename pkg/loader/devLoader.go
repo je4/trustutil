@@ -3,7 +3,6 @@ package loader
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"log"
 	"time"
 
 	"emperror.dev/errors"
@@ -46,44 +45,42 @@ func (d *devLoader) Close() error {
 	return nil
 }
 
-func (d *devLoader) Start() error {
+func (d *devLoader) Run() error {
 	defaultCA, defaultCAPrivKey, err := certutil.CertificateKeyFromPEM(certutil.DefaultCACrt, certutil.DefaultCAKey, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot decode default ca certificate")
 	}
 	name := certutil.DefaultName
 
-	go func() {
-		for {
-			certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
-				d.client,
-				!d.client,
-				time.Duration(float64(d.interval)*1.1),
-				defaultCA,
-				defaultCAPrivKey,
-				certutil.DefaultIPAddresses,
-				certutil.DefaultDNSNames,
-				nil,
-				certutil.DefaultURIs,
-				name,
-				certutil.DefaultKeyType)
+	for {
+		certPEM, certPrivKeyPEM, err := certutil.CreateCertificate(
+			d.client,
+			!d.client,
+			time.Duration(float64(d.interval)*1.1),
+			defaultCA,
+			defaultCAPrivKey,
+			certutil.DefaultIPAddresses,
+			certutil.DefaultDNSNames,
+			nil,
+			certutil.DefaultURIs,
+			name,
+			certutil.DefaultKeyType)
+		if err != nil {
+			return errors.Wrap(err, "cannot create server certificate")
+		} else {
+			serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
 			if err != nil {
-				log.Printf("cannot create server certificate: %v", err)
+				return errors.Wrap(err, "cannot create server certificate from key pair")
 			} else {
-				serverCert, err := tls.X509KeyPair(certPEM, certPrivKeyPEM)
-				if err != nil {
-					log.Printf("cannot create server certificate from key pair: %v", err)
-				} else {
-					d.certChannel <- &serverCert
-				}
-			}
-			select {
-			case <-d.done:
-				break
-			case <-time.After(d.interval):
+				d.certChannel <- &serverCert
 			}
 		}
-	}()
+		select {
+		case <-d.done:
+			return nil
+		case <-time.After(d.interval):
+		}
+	}
 
 	return nil
 }

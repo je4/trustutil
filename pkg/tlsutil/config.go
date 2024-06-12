@@ -13,6 +13,7 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS12,
+		ClientCAs:    caCertPool,
 		/*
 			GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				return &cert, nil

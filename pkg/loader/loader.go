@@ -17,7 +17,7 @@ import (
 
 type Loader interface {
 	io.Closer
-	Start() error
+	Run() error
 	GetCA() *x509.CertPool
 }
 
@@ -43,7 +43,7 @@ func initLoader(conf *config.TLSConfig, certChannel chan *tls.Certificate, clien
 		} else {
 			log.Printf("starting loader\n")
 		}
-		if err := l.Start(); err != nil {
+		if err := l.Run(); err != nil {
 			if logger != nil {
 				logger.Error().Err(err).Msg("error starting loader")
 			} else {
