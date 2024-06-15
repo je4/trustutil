@@ -9,15 +9,21 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"regexp"
+	"slices"
+	"strings"
 	"time"
 )
 
-func NewInterceptor(logger zLogger.ZLogger) *Interceptor {
-	return &Interceptor{logger: logger}
+func NewInterceptor(domains []string, logger zLogger.ZLogger) *Interceptor {
+	if len(domains) == 0 {
+		domains = []string{""}
+	}
+	return &Interceptor{domains: domains, logger: logger}
 }
 
 type Interceptor struct {
-	logger zLogger.ZLogger
+	logger  zLogger.ZLogger
+	domains []string
 }
 
 var methodRegexp = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
@@ -43,16 +49,20 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 		return nil, status.Errorf(codes.Unauthenticated, "no client certificate")
 	}
 	v := tlsInfo.State.PeerCertificates[0]
-	uri := "grpc:" + matches[1]
+	var uris = []string{"*"}
+	for _, domain := range i.domains {
+		uris = append(uris, "grpc:"+strings.TrimLeft(domain+"."+matches[1], "."))
+	}
+	//	uri := "grpc:" + matches[1]
 	ok = false
 	for _, u := range v.URIs {
-		if u.String() == uri || u.String() == "*" {
+		if slices.Contains(uris, u.String()) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return nil, status.Errorf(codes.PermissionDenied, "client certificate does not match URI: %s", uri)
+		return nil, status.Errorf(codes.PermissionDenied, "client certificate does not match URIs: %v", uris)
 	}
 
 	start := time.Now()
