@@ -3,15 +3,17 @@ package grpchelper
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"net"
+
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"net"
 )
 
-func NewServer(addr string, tlsConfig *tls.Config, domains []string, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
+func NewServer(addr string, tlsConfig *tls.Config, cert, key string, domains []string, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
 	listenConfig := &net.ListenConfig{
 		Control:   nil,
 		KeepAlive: 0,
@@ -30,8 +32,20 @@ func NewServer(addr string, tlsConfig *tls.Config, domains []string, logger zLog
 			return nil, errors.Wrap(err, "cannot create default server TLS config")
 		}
 	}
+	creds, err := credentials.NewServerTLSFromFile(cert, key)
+	if err != nil {
+		fmt.Println("credentials.NewServerTLSFromFile err", err)
+	}
+	// creds2, err := credentials.NewClientTLSFromFile(cert, key)
+	// if err != nil {
+	// 	fmt.Println("credentials.NewServerTLSFromFile err", err)
+	// }
+	// creds, err := credentials.Ne(cert, key)
+	// fmt.Println("credentials.NewTLS(tlsConfig)", credentials.NewTLS(tlsConfig))
 
-	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	// fmt.Println("\ngrpc.Creds(creds)", (creds).)
+	// fmt.Println("\ngrpc.Creds(creds)", (credentials.NewTLS(tlsConfig).Info()))
+	opts = append(opts, grpc.Creds(creds), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		Server:   grpcServer,

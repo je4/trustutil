@@ -2,16 +2,17 @@ package grpchelper
 
 import (
 	"context"
-	"github.com/je4/utils/v2/pkg/zLogger"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/status"
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/je4/utils/v2/pkg/zLogger"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func NewInterceptor(domains []string, logger zLogger.ZLogger) *Interceptor {
@@ -28,6 +29,16 @@ type Interceptor struct {
 
 var methodRegexp = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 
+// authenticateAgent check the client credentials
+func GetClientsUris(ctx context.Context) ([]string, error) {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		uris := md["uris"]
+		fmt.Println("uris", uris)
+		return uris, nil
+	}
+	return []string{}, fmt.Errorf("missing credentials")
+}
+
 func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	req interface{},
 	info *grpc.UnaryServerInfo,
@@ -37,26 +48,46 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	if len(matches) != 3 {
 		return nil, status.Errorf(codes.Internal, "Invalid method name: %s", info.FullMethod)
 	}
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "could not get peer")
+	// p, ok := peer.FromContext(ctx)
+	// if !ok {
+	// 	return nil, status.Errorf(codes.Unauthenticated, "could not get peer")
+	// }
+	// tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
+	// if !ok {
+	// 	return nil, status.Errorf(codes.Unauthenticated, "could not get TLSInfo")
+	// }
+	// if len(tlsInfo.State.PeerCertificates) == 0 {
+	// 	return nil, status.Errorf(codes.Unauthenticated, "no client certificate")
+	// }
+	// v := tlsInfo.State.PeerCertificates[0]
+	// var uris = []string{"*"}
+	// for _, domain := range i.domains {
+	// 	uris = append(uris, "grpc:"+strings.TrimLeft(domain+"."+matches[1], "."))
+	// }
+	// //	uri := "grpc:" + matches[1]
+	// ok = false
+	// for _, u := range v.URIs {
+	// 	if slices.Contains(uris, u.String()) {
+	// 		ok = true
+	// 		break
+	// 	}
+	// }
+	// if !ok {
+	// 	return nil, status.Errorf(codes.PermissionDenied, "client certificate does not match URIs: %v", uris)
+	// }
+
+	curis, err := GetClientsUris(ctx)
+	if err != nil {
+		return nil, err
 	}
-	tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "could not get TLSInfo")
-	}
-	if len(tlsInfo.State.PeerCertificates) == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "no client certificate")
-	}
-	v := tlsInfo.State.PeerCertificates[0]
 	var uris = []string{"*"}
 	for _, domain := range i.domains {
 		uris = append(uris, "grpc:"+strings.TrimLeft(domain+"."+matches[1], "."))
 	}
 	//	uri := "grpc:" + matches[1]
-	ok = false
-	for _, u := range v.URIs {
-		if slices.Contains(uris, u.String()) {
+	ok := false
+	for _, u := range curis {
+		if slices.Contains(uris, u) {
 			ok = true
 			break
 		}
@@ -64,7 +95,6 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	if !ok {
 		return nil, status.Errorf(codes.PermissionDenied, "client certificate does not match URIs: %v", uris)
 	}
-
 	start := time.Now()
 
 	// Calls the handler
