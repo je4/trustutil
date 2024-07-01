@@ -32,9 +32,8 @@ var methodRegexp = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 // authenticateAgent check the client credentials
 func GetClientsUris(ctx context.Context) ([]string, error) {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		uris := md["uris"]
-		fmt.Println("uris", uris)
-		return uris, nil
+		uris := md["uris"][0]
+		return strings.Split(uris, ","), nil
 	}
 	return []string{}, fmt.Errorf("missing credentials")
 }
