@@ -2,7 +2,6 @@ package grpchelper
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -37,7 +36,7 @@ func GetClientsUris(ctx context.Context) ([]string, error) {
 			return strings.Split(uris, ","), nil
 		}
 	}
-	return []string{}, fmt.Errorf("missing credentials")
+	return []string{}, nil
 }
 
 func (i *Interceptor) ServerInterceptor(ctx context.Context,
