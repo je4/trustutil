@@ -50,48 +50,49 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	if len(matches) != 3 {
 		return nil, status.Errorf(codes.Internal, "Invalid method name: %s", info.FullMethod)
 	}
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "could not get peer")
-	}
-	tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
-	if !ok {
-		return nil, status.Errorf(codes.Unauthenticated, "could not get TLSInfo")
-	}
-
-	if len(tlsInfo.State.PeerCertificates) == 0 {
-		return nil, status.Errorf(codes.Unauthenticated, "no client certificate")
-	}
-	v := tlsInfo.State.PeerCertificates[0]
 	var uris = []string{"*"}
+	curis, err := GetClientsUris(ctx)
+	if err != nil {
+		return nil, err
+	}
+	// var uris = []string{"*"}
 	for _, domain := range i.domains {
 		uris = append(uris, "grpc:"+strings.TrimLeft(domain+"."+matches[1], "."))
 	}
 	//	uri := "grpc:" + matches[1]
-	ok = false
-	for _, u := range v.URIs {
-		if slices.Contains(uris, u.String()) {
+	ok := false
+	for _, u := range curis {
+		if slices.Contains(uris, u) {
 			ok = true
-			fmt.Println("OK v.URIs")
+			fmt.Println("OK curis")
 			break
 		}
 	}
 
 	if !ok {
-		curis, err := GetClientsUris(ctx)
-		if err != nil {
-			return nil, err
+		p, ok := peer.FromContext(ctx)
+		if !ok {
+			return nil, status.Errorf(codes.Unauthenticated, "could not get peer")
 		}
-		// var uris = []string{"*"}
+		tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo)
+		if !ok {
+			return nil, status.Errorf(codes.Unauthenticated, "could not get TLSInfo")
+		}
+
+		if len(tlsInfo.State.PeerCertificates) == 0 {
+			return nil, status.Errorf(codes.Unauthenticated, "no client certificate")
+		}
+		v := tlsInfo.State.PeerCertificates[0]
+
 		for _, domain := range i.domains {
 			uris = append(uris, "grpc:"+strings.TrimLeft(domain+"."+matches[1], "."))
 		}
 		//	uri := "grpc:" + matches[1]
 		ok = false
-		for _, u := range curis {
-			if slices.Contains(uris, u) {
+		for _, u := range v.URIs {
+			if slices.Contains(uris, u.String()) {
 				ok = true
-				fmt.Println("OK curis")
+				fmt.Println("OK v.URIs")
 				break
 			}
 		}
