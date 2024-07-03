@@ -11,7 +11,7 @@ import (
 	"github.com/je4/trustutil/v2/pkg/certutil"
 )
 
-func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, rootCAs, caCertPool *x509.CertPool) (*tls.Config, error) {
+func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caCertPool *x509.CertPool) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS12,
@@ -48,7 +48,7 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, roo
 					}
 				}
 				opts := x509.VerifyOptions{
-					Roots:         rootCAs,
+					Roots:         caCertPool,
 					CurrentTime:   time.Now(),
 					Intermediates: x509.NewCertPool(),
 					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
