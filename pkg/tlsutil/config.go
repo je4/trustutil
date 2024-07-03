@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"slices"
 	"time"
 
 	"emperror.dev/errors"
@@ -21,50 +22,51 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 			},
 		*/
 	}
-	fmt.Println("CreateServerTLSConfig uris", uris)
-	// if !mutual && len(uris) > 0 {
-	// 	return nil, errors.New("uris is only allowed with mutual tls")
-	// }
-	// if mutual {
-	// 	tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-	// 	if len(uris) > 0 {
-	// 		tlsConfig.VerifyPeerCertificate = func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
-	// 			if len(verifiedChains) < 1 {
-	// 				return errors.New("no verified chains")
-	// 			}
-	// 			if len(verifiedChains[0]) < 1 {
-	// 				return errors.New("no verified chain 0")
-	// 			}
-	// 			c := verifiedChains[0][0]
-	// 			clientURIs := []string{}
-	// 			for _, u := range c.URIs {
-	// 				clientURIs = append(clientURIs, u.String())
-	// 			}
-	// 			for _, u := range uris {
-	// 				if !slices.Contains(clientURIs, u) {
-	// 					return errors.Errorf("no match for uri %s", u)
-	// 				}
-	// 			}
-	// 			/*
-	// 				result, err := certinfo.CertificateText(c)
-	// 				if err != nil {
-	// 					return errors.Wrap(err, "cannot get certificate text")
-	// 				}
-	// 				log.Println("cert [0][0]")
-	// 				log.Println(result)
-	// 				if len(verifiedChains[0]) > 1 {
-	// 					result, err := certinfo.CertificateText(verifiedChains[0][1])
-	// 					if err != nil {
-	// 						return errors.Wrap(err, "cannot get certificate text")
-	// 					}
-	// 					log.Println("cert [0][1]")
-	// 					log.Println(result)
-	// 				}
-	// 			*/
-	// 			return nil
-	// 		}
-	// 	}
-	// }
+	fmt.Println("\n\n\nCreateServerTLSConfig uris", uris)
+	if !mutual && len(uris) > 0 {
+		return nil, errors.New("uris is only allowed with mutual tls")
+	}
+	if mutual {
+		// tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		fmt.Println("tlsConfig.ClientAuth", tls.RequireAndVerifyClientCert)
+		if len(uris) > 0 {
+			tlsConfig.VerifyPeerCertificate = func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
+				if len(verifiedChains) < 1 {
+					return errors.New("no verified chains")
+				}
+				if len(verifiedChains[0]) < 1 {
+					return errors.New("no verified chain 0")
+				}
+				c := verifiedChains[0][0]
+				clientURIs := []string{}
+				for _, u := range c.URIs {
+					clientURIs = append(clientURIs, u.String())
+				}
+				for _, u := range uris {
+					if !slices.Contains(clientURIs, u) {
+						return errors.Errorf("no match for uri %s", u)
+					}
+				}
+				/*
+					result, err := certinfo.CertificateText(c)
+					if err != nil {
+						return errors.Wrap(err, "cannot get certificate text")
+					}
+					log.Println("cert [0][0]")
+					log.Println(result)
+					if len(verifiedChains[0]) > 1 {
+						result, err := certinfo.CertificateText(verifiedChains[0][1])
+						if err != nil {
+							return errors.Wrap(err, "cannot get certificate text")
+						}
+						log.Println("cert [0][1]")
+						log.Println(result)
+					}
+				*/
+				return nil
+			}
+		}
+	}
 	return tlsConfig, nil
 }
 
