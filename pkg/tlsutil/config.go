@@ -11,7 +11,7 @@ import (
 	"github.com/je4/trustutil/v2/pkg/certutil"
 )
 
-func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caCertPool *x509.CertPool) (*tls.Config, error) {
+func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, rootCAs, caCertPool *x509.CertPool) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		MinVersion:   tls.VersionTLS12,
@@ -28,7 +28,7 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 	}
 	if mutual {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-		fmt.Println("tlsConfig.ClientAuth", tls.RequestClientCert)
+
 		if len(uris) > 0 {
 			tlsConfig.VerifyPeerCertificate = func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
 				if len(verifiedChains) < 1 {
@@ -47,21 +47,30 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 						return errors.Errorf("no match for uri %s", u)
 					}
 				}
+				opts := x509.VerifyOptions{
+					Roots:         rootCAs,
+					CurrentTime:   time.Now(),
+					Intermediates: x509.NewCertPool(),
+					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+				}
+				_, err := verifiedChains[0][0].Verify(opts)
+				return err
 				/*
-					result, err := certinfo.CertificateText(c)
-					if err != nil {
-						return errors.Wrap(err, "cannot get certificate text")
-					}
-					log.Println("cert [0][0]")
-					log.Println(result)
-					if len(verifiedChains[0]) > 1 {
-						result, err := certinfo.CertificateText(verifiedChains[0][1])
+					/*
+						result, err := certinfo.CertificateText(c)
 						if err != nil {
 							return errors.Wrap(err, "cannot get certificate text")
 						}
-						log.Println("cert [0][1]")
+						log.Println("cert [0][0]")
 						log.Println(result)
-					}
+						if len(verifiedChains[0]) > 1 {
+							result, err := certinfo.CertificateText(verifiedChains[0][1])
+							if err != nil {
+								return errors.Wrap(err, "cannot get certificate text")
+							}
+							log.Println("cert [0][1]")
+							log.Println(result)
+						}
 				*/
 				return nil
 			}
