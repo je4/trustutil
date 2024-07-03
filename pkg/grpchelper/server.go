@@ -3,8 +3,11 @@ package grpchelper
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"log"
 	"net"
+	"os"
 
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
@@ -13,7 +16,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-func NewServer(addr string, tlsConfig *tls.Config, cert, key string, domains []string, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
+func NewServer(addr string, tlsConfig *tls.Config, cert, key string, ca []string, domains []string, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
 	listenConfig := &net.ListenConfig{
 		Control:   nil,
 		KeepAlive: 0,
@@ -42,10 +45,34 @@ func NewServer(addr string, tlsConfig *tls.Config, cert, key string, domains []s
 	// }
 	// creds, err := credentials.Ne(cert, key)
 	// fmt.Println("credentials.NewTLS(tlsConfig)", credentials.NewTLS(tlsConfig))
+	certPool := x509.NewCertPool()
+	crt, err := os.ReadFile(cert)
+	if err != nil {
+		log.Fatalf("failed to read crt certificate: %v", err)
+	}
+	key2, err := os.ReadFile(key)
+	if err != nil {
+		log.Fatalf("failed to read key certificate: %v", err)
+	}
+	certificate, err := tls.X509KeyPair(crt, key2)
+	if err != nil {
+		log.Fatalf("failed to load certificate: %v", err)
+	}
+	cas, err := os.ReadFile(ca[0])
+	if err != nil {
+		log.Fatalf("cannot read internal ca.crt")
+	}
+	if ok := certPool.AppendCertsFromPEM(cas); !ok {
+		log.Fatalf("failed to append CA certificate to pool")
+	}
+	clientTLSConfig, err := tlsutil.CreateClientMTLSConfig(certificate, certPool)
+	if err != nil {
+		log.Fatalf("cannot create tls config: %v", err)
+	}
 
 	fmt.Println("\ngrpc.Creds(creds)", (creds))
 	// fmt.Println("\ngrpc.Creds(creds)", (credentials.NewTLS(tlsConfig).Info()))
-	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	opts = append(opts, grpc.Creds(credentials.NewTLS(clientTLSConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	// opts = append(opts, grpc.Creds(creds), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{

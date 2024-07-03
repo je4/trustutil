@@ -2,6 +2,8 @@ package grpchelper
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"slices"
@@ -40,6 +42,24 @@ func GetClientsUris(ctx context.Context) ([]string, error) {
 		}
 	}
 	return []string{}, nil
+}
+
+// GetTlsConfig check the client credentials
+func GetTlsConfig(ctx context.Context) (*tls.Config, error) {
+	var tlsConfig tls.Config
+
+	// fmt.Println(tlsConfig)
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if md["tlsConfig"] != nil {
+			// tlsConfig := md["tlsConfig"][0]
+			str := md["tlsConfig"][0]
+			if err := json.Unmarshal([]byte(str), &tlsConfig); err != nil {
+				panic(err)
+			}
+			return &tlsConfig, nil
+		}
+	}
+	return &tls.Config{}, nil
 }
 
 func (i *Interceptor) ServerInterceptor(ctx context.Context,
