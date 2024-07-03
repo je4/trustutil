@@ -27,8 +27,8 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 		return nil, errors.New("uris is only allowed with mutual tls")
 	}
 	if mutual {
-		// tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
-		fmt.Println("tlsConfig.ClientAuth", tls.RequireAndVerifyClientCert)
+		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+		fmt.Println("tlsConfig.ClientAuth", tls.RequestClientCert)
 		if len(uris) > 0 {
 			tlsConfig.VerifyPeerCertificate = func(_ [][]byte, verifiedChains [][]*x509.Certificate) error {
 				if len(verifiedChains) < 1 {
