@@ -3,11 +3,7 @@ package grpchelper
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"fmt"
-	"log"
 	"net"
-	"os"
 
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
@@ -35,44 +31,51 @@ func NewServer(addr string, tlsConfig *tls.Config, cert, key string, ca []string
 			return nil, errors.Wrap(err, "cannot create default server TLS config")
 		}
 	}
-	creds, err := credentials.NewServerTLSFromFile(cert, key)
-	if err != nil {
-		fmt.Println("credentials.NewServerTLSFromFile err", err)
-	}
-	// creds2, err := credentials.NewClientTLSFromFile(cert, key)
+	// creds, err := credentials.NewServerTLSFromFile(cert, key)
 	// if err != nil {
 	// 	fmt.Println("credentials.NewServerTLSFromFile err", err)
 	// }
-	// creds, err := credentials.Ne(cert, key)
-	// fmt.Println("credentials.NewTLS(tlsConfig)", credentials.NewTLS(tlsConfig))
-	certPool := x509.NewCertPool()
-	crt, err := os.ReadFile(cert)
-	if err != nil {
-		log.Fatalf("failed to read crt certificate: %v", err)
-	}
-	key2, err := os.ReadFile(key)
-	if err != nil {
-		log.Fatalf("failed to read key certificate: %v", err)
-	}
-	certificate, err := tls.X509KeyPair(crt, key2)
-	if err != nil {
-		log.Fatalf("failed to load certificate: %v", err)
-	}
-	cas, err := os.ReadFile(ca[0])
-	if err != nil {
-		log.Fatalf("cannot read internal ca.crt")
-	}
-	if ok := certPool.AppendCertsFromPEM(cas); !ok {
-		log.Fatalf("failed to append CA certificate to pool")
-	}
-	clientTLSConfig, err := tlsutil.CreateClientMTLSConfig(certificate, certPool)
-	if err != nil {
-		log.Fatalf("cannot create tls config: %v", err)
-	}
+	// // creds2, err := credentials.NewClientTLSFromFile(cert, key)
+	// // if err != nil {
+	// // 	fmt.Println("credentials.NewServerTLSFromFile err", err)
+	// // }
+	// // creds, err := credentials.Ne(cert, key)
+	// // fmt.Println("credentials.NewTLS(tlsConfig)", credentials.NewTLS(tlsConfig))
+	// certPool := x509.NewCertPool()
+	// crt, err := os.ReadFile(cert)
+	// if err != nil {
+	// 	log.Fatalf("failed to read crt certificate: %v", err)
+	// }
+	// key2, err := os.ReadFile(key)
+	// if err != nil {
+	// 	log.Fatalf("failed to read key certificate: %v", err)
+	// }
+	// certificate, err := tls.X509KeyPair(crt, key2)
+	// if err != nil {
+	// 	log.Fatalf("failed to load certificate: %v", err)
+	// }
+	// for _, caName := range ca {
+	// 	pemData, err := os.ReadFile(caName)
+	// 	if err != nil {
+	// 		log.Fatalf("cannot read internal ca.crt")
+	// 	}
+	// 	if ok := certPool.AppendCertsFromPEM(pemData); !ok {
+	// 		log.Fatalf("failed to append CA certificate to pool")
+	// 	}
+	// }
+	// clientTLSConfig, err := tlsutil.CreateClientMTLSConfig(certificate, certPool)
+	// if err != nil {
+	// 	log.Fatalf("cannot create tls config: %v", err)
+	// }
 
-	fmt.Println("\ngrpc.Creds(creds)", (creds))
+	// tlsConfig, err = tlsutil.CreateServerTLSConfig(certificate, true, uris, l.GetCA())
+	// if err != nil {
+	// 	log.Fatalf("cannot  CreateServerTLSConfig : %v", err)
+	// }
+	// fmt.Println("\ngrpc.Creds(creds)", (creds))
 	// fmt.Println("\ngrpc.Creds(creds)", (credentials.NewTLS(tlsConfig).Info()))
-	opts = append(opts, grpc.Creds(credentials.NewTLS(clientTLSConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	// opts = append(opts, grpc.Creds(credentials.NewTLS(clientTLSConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	// opts = append(opts, grpc.Creds(creds), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
