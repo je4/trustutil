@@ -43,9 +43,10 @@ func NewServer(addr string, tlsConfig *tls.Config, cert, key string, domains []s
 	// creds, err := credentials.Ne(cert, key)
 	// fmt.Println("credentials.NewTLS(tlsConfig)", credentials.NewTLS(tlsConfig))
 
-	// fmt.Println("\ngrpc.Creds(creds)", (creds).)
+	fmt.Println("\ngrpc.Creds(creds)", (creds))
 	// fmt.Println("\ngrpc.Creds(creds)", (credentials.NewTLS(tlsConfig).Info()))
-	opts = append(opts, grpc.Creds(creds), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
+	// opts = append(opts, grpc.Creds(creds), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		Server:   grpcServer,

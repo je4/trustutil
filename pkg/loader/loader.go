@@ -3,16 +3,17 @@ package loader
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"io"
+	"log"
+	"strings"
+	"time"
+
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/config"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	configutil "github.com/je4/utils/v2/pkg/config"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"github.com/smallstep/certinfo"
-	"io"
-	"log"
-	"strings"
-	"time"
 )
 
 type Loader interface {
