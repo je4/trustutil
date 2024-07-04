@@ -42,6 +42,7 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 				for _, u := range c.URIs {
 					clientURIs = append(clientURIs, u.String())
 				}
+				fmt.Println("clientURIs", clientURIs)
 				for _, u := range uris {
 					if !slices.Contains(clientURIs, u) {
 						return errors.Errorf("no match for uri %s", u)
@@ -54,6 +55,7 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 					KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 				}
 				_, err := verifiedChains[0][0].Verify(opts)
+				fmt.Println("verifiedChains err", err)
 				return err
 				/*
 					/*
