@@ -1,5 +1,6 @@
 package config
 
+/*
 import configutil "github.com/je4/utils/v2/pkg/config"
 
 type TLSConfig struct {
@@ -10,3 +11,6 @@ type TLSConfig struct {
 	Interval      configutil.Duration `json:"interval,omitempty" toml:"interval"`
 	UseSystemPool bool                `json:"usesystempool,omitempty" toml:"usesystempool"`
 }
+
+
+*/
