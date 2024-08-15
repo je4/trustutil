@@ -71,8 +71,16 @@ func (cp *Certificate) UnmarshalText(text []byte) error {
 	return errors.New("no certificate found")
 }
 
+func (cp *Certificate) MarshalText() ([]byte, error) {
+	return []byte(cp.Certificate.Subject.String()), nil
+}
+
 func (cp *Certificate) UnmarshalYAML(value *yaml.Node) error {
 	var text string
 	value.Decode(&text)
 	return cp.UnmarshalText([]byte(text))
+}
+
+func (cp *Certificate) MarshalYAML() (interface{}, error) {
+	return cp.Certificate.Subject.String(), nil
 }
