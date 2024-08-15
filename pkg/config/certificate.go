@@ -4,8 +4,9 @@ import (
 	"crypto/x509"
 	"emperror.dev/errors"
 	"encoding/pem"
+	"github.com/je4/utils/v2/pkg/config"
+	"gopkg.in/yaml.v3"
 	"os"
-	"regexp"
 	"strings"
 )
 
@@ -14,33 +15,28 @@ type Certificate struct {
 	Key any
 }
 
-var envRegexp = regexp.MustCompile(`%%([^%]+)%%`)
-
 func (cp *Certificate) UnmarshalText(text []byte) error {
-	pemString := strings.TrimSpace(string(text))
-	if found := envRegexp.FindStringSubmatch(pemString); found != nil {
-		pemString = os.Getenv(found[1])
-		if pemString == "" {
-			return errors.Errorf("environment variable %s is empty", found[1])
-		}
-	} else {
-		if !strings.HasPrefix(pemString, "-----BEGIN CERTIFICATE-----") {
-			fi, err := os.Stat(pemString)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return errors.Errorf("'%s' not a certificate", pemString)
-				}
-				return errors.Wrapf(err, "cannot stat file %s", pemString)
-			} else {
-				if fi.IsDir() {
-					return errors.Errorf("file %s is a directory", pemString)
-				}
-				data, err := os.ReadFile(pemString)
-				if err != nil {
-					return errors.Wrapf(err, "cannot read file %s", pemString)
-				}
-				pemString = string(data)
+	var pe config.EnvString
+	if err := pe.UnmarshalText(text); err != nil {
+		return errors.Wrap(err, "cannot unmarshal certificate string")
+	}
+	pemString := strings.TrimSpace(string(pe))
+	if !strings.HasPrefix(pemString, "-----BEGIN CERTIFICATE-----") {
+		fi, err := os.Stat(pemString)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return errors.Errorf("'%s' not a certificate", pemString)
 			}
+			return errors.Wrapf(err, "cannot stat file %s", pemString)
+		} else {
+			if fi.IsDir() {
+				return errors.Errorf("file %s is a directory", pemString)
+			}
+			data, err := os.ReadFile(pemString)
+			if err != nil {
+				return errors.Wrapf(err, "cannot read file %s", pemString)
+			}
+			pemString = string(data)
 		}
 	}
 	newCert := Certificate{}
@@ -73,4 +69,10 @@ func (cp *Certificate) UnmarshalText(text []byte) error {
 		return nil
 	}
 	return errors.New("no certificate found")
+}
+
+func (cp *Certificate) UnmarshalYAML(value *yaml.Node) error {
+	var text string
+	value.Decode(&text)
+	return cp.UnmarshalText([]byte(text))
 }
