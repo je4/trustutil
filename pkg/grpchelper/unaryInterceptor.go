@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"regexp"
@@ -27,6 +28,7 @@ type Interceptor struct {
 }
 
 var methodRegexp = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
+var domainRegexp = regexp.MustCompile(`^([a-zA-Z0-9-]+)\.([a-zA-Z0-9-]+)\.([a-zA-Z0-9-]+)`)
 
 func (i *Interceptor) ServerInterceptor(ctx context.Context,
 	req interface{},
@@ -65,16 +67,26 @@ func (i *Interceptor) ServerInterceptor(ctx context.Context,
 		return nil, status.Errorf(codes.PermissionDenied, "client certificate does not match URIs: %v", uris)
 	}
 
+	var domain string
+	if meta, ok := metadata.FromIncomingContext(ctx); ok {
+		authority := meta.Get(":authority")
+		if len(authority) > 0 {
+			matches := domainRegexp.FindStringSubmatch(authority[0])
+			if len(matches) == 4 {
+				domain = matches[1]
+				meta.Set("domain", domain)
+				ctx = metadata.NewIncomingContext(ctx, meta)
+			}
+		}
+	}
+
 	start := time.Now()
 
 	// Calls the handler
 	h, err := handler(ctx, req)
 
 	// Logging with grpclog (grpclog.LoggerV2)
-	i.logger.Debug().Msgf("Request - Method:%s\tDuration:%s\tError:%v",
-		info.FullMethod,
-		time.Since(start),
-		err)
+	i.logger.Debug().Err(err).Str("domain", domain).Str("method", info.FullMethod).Dur("duration", time.Since(start))
 
 	return h, err
 }
