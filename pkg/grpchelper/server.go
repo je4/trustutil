@@ -3,12 +3,13 @@ package grpchelper
 import (
 	"context"
 	"crypto/tls"
+	"net"
+
 	"emperror.dev/errors"
 	"github.com/je4/trustutil/v2/pkg/tlsutil"
 	"github.com/je4/utils/v2/pkg/zLogger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"net"
 )
 
 func NewServer(addr string, tlsConfig *tls.Config, domains []string, logger zLogger.ZLogger, opts ...grpc.ServerOption) (*Server, error) {
@@ -34,6 +35,7 @@ func NewServer(addr string, tlsConfig *tls.Config, domains []string, logger zLog
 	opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)), grpc.UnaryInterceptor(interceptor.ServerInterceptor))
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
+		addr:     addr,
 		Server:   grpcServer,
 		listener: lis,
 		logger:   logger,
@@ -45,10 +47,12 @@ type Server struct {
 	*grpc.Server
 	listener net.Listener
 	logger   zLogger.ZLogger
+	addr     string
 }
 
 func (s *Server) GetAddr() string {
-	return s.listener.Addr().String()
+	return s.addr
+	// return s.listener.Addr().String()
 }
 
 func (s *Server) Startup() {
