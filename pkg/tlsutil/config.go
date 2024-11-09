@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caCertPool *x509.CertPool) (*tls.Config, error) {
+func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caCertPool *x509.CertPool, tlsMinVersion, tlsMaxVersion uint16) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS12,
+		MinVersion:   tlsMinVersion,
+		MaxVersion:   tlsMaxVersion,
 		ClientCAs:    caCertPool,
 		/*
 			GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -114,7 +115,7 @@ func CreateDefaultServerTLSConfig(commonName string, useSystemCertPool bool) (*t
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create server certificate from key pair")
 	}
-	tlsConfig, err := CreateServerTLSConfig(serverCert, true, nil, certPool)
+	tlsConfig, err := CreateServerTLSConfig(serverCert, true, nil, certPool, tls.VersionTLS12, tls.VersionTLS13)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create server tls config")
 	}
