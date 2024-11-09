@@ -67,10 +67,12 @@ func CreateServerTLSConfig(cert tls.Certificate, mutual bool, uris []string, caC
 	return tlsConfig, nil
 }
 
-func CreateClientMTLSConfig(clientCert tls.Certificate, caCertPool *x509.CertPool) (*tls.Config, error) {
+func CreateClientMTLSConfig(clientCert tls.Certificate, caCertPool *x509.CertPool, tlsMinVersion, tlsMaxVersion uint16) (*tls.Config, error) {
 	clientTLSConf := &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
 		RootCAs:      caCertPool,
+		MinVersion:   tlsMinVersion,
+		MaxVersion:   tlsMaxVersion,
 	}
 
 	return clientTLSConf, nil
