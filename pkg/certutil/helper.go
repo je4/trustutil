@@ -38,7 +38,13 @@ func KeyFromPEM(keyPEM, password []byte) (any, error) {
 	if caPrivKeyBlock == nil {
 		return nil, errors.New("cannot decode private key PEM")
 	}
-	key, err := x509.ParsePKCS8PrivateKey(caPrivKeyBlock.Bytes)
+	var key any
+	switch caPrivKeyBlock.Type {
+	case "EC PRIVATE KEY":
+		key, err = x509.ParseECPrivateKey(caPrivKeyBlock.Bytes)
+	default:
+		key, err = x509.ParsePKCS8PrivateKey(caPrivKeyBlock.Bytes)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot parse private key")
 	}
