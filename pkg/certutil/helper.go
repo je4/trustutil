@@ -53,6 +53,20 @@ func KeyFromPEM(keyPEM, password []byte) (any, error) {
 	return key, nil
 }
 
+func PublicKeyFromPEM(keyPEM []byte) (any, error) {
+	caPubKeyBlock, _ := pem.Decode(keyPEM)
+	var key any
+	var err1, err2 error
+	key, err1 = x509.ParsePKIXPublicKey(caPubKeyBlock.Bytes)
+	if err1 != nil {
+		key, err2 = x509.ParsePKCS1PublicKey(caPubKeyBlock.Bytes)
+		if err2 != nil {
+			return nil, errors.Wrap(errors.Combine(err1, err2), "cannot parse PKIX, PKCS1 public key")
+		}
+	}
+	return key, nil
+}
+
 func CertificateKeyFromPEM(certPEM, keyPEM, password []byte) (*x509.Certificate, any, error) {
 	c, err := CertificateFromPEM(certPEM)
 	if err != nil {
